@@ -17,8 +17,7 @@ class ECSResourceStack extends Stack {
         const vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
           isDefault: true,
         });
-
-
+        const {ecr} = props
 
         // const cluster = new ecs.Cluster(this, 'ECSFargateCluster', { vpc });
         //

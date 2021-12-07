@@ -13,8 +13,9 @@ const codeCommitRepositoryName = "queue-processing-codecommit-repo"
 const imageTagVersion = "v1.0.0"
 
 
-
 class CodePipelineResourceStack extends Stack {
+
+
     /**
      *
      * @param {Construct} scope
@@ -30,6 +31,7 @@ class CodePipelineResourceStack extends Stack {
                 actionName: 'CodeCommit',
                 repository: codeCommitRepository,
                 output: sourceOutput,
+                branch: "main"
             });
 
             const buildAction = new codepipeline_actions.CodeBuildAction({
@@ -53,7 +55,7 @@ class CodePipelineResourceStack extends Stack {
             });
         }
 
-        const createCodebuild = (repository) => {
+        const createCodebuild = () => {
             const adminManagedPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
             const codeBuildRole = new iam.Role(this, 'CodeBuildRole', {
                 assumedBy: new iam.ServicePrincipal("codebuild.amazonaws.com"),
@@ -63,14 +65,19 @@ class CodePipelineResourceStack extends Stack {
                 roleName: "CodeBuildRole"
             })
 
-            return new codebuild.Project(this, 'QueueProcessingProject', {
-                source: codebuild.Source.codeCommit({ repository }),
+            return new codebuild.PipelineProject(this, 'QueueProcessingProject', {
+                // source: codebuild.Source.codeCommit({ repository }),
                 projectName: codebuildName,
                 environmentVariables: {
                     AWS_DEFAULT_REGION: {value: process.env.CDK_DEFAULT_REGION},
                     AWS_ACCOUNT_ID: {value: process.env.CDK_DEFAULT_ACCOUNT},
                     IMAGE_REPO_NAME: {value: ecrRepositoryName},
                     IMAGE_TAG: {value: imageTagVersion}
+                },
+                environment: {
+                    buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_3,
+                    privileged: true,
+                    computeType: codebuild.ComputeType.SMALL
                 },
                 role: codeBuildRole
             });
@@ -88,22 +95,15 @@ class CodePipelineResourceStack extends Stack {
         }
 
         const createECRRepository = () => {
-            new ecr.Repository(this, 'Repository', {
+            return new ecr.Repository(this, 'Repository', {
                 repositoryName: ecrRepositoryName
             });
         }
 
-
-
-
-        createECRRepository()
+        this.ecrRepository = createECRRepository()
         const codeCommitRepository = createCodeRepository()
-        const codebuildProject = createCodebuild(codeCommitRepository)
-        // createCodePipeline(codeCommitRepository, codebuildProject)
-
-
-
-
+        const codebuildProject = createCodebuild()
+        createCodePipeline(codeCommitRepository, codebuildProject)
 
     }
 }

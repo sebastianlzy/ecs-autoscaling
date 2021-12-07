@@ -7,9 +7,12 @@ const { CodePipelineResourceStack } = require('../lib/codepipeline-resource-stac
 
 const app = new cdk.App();
 
-new CodePipelineResourceStack(app, 'CodePipelineResourceStack', {
+const codePipelineResourceStack = new CodePipelineResourceStack(app, 'CodePipelineResourceStack', {
+  stackName: 'CodePipelineResourceStack',
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
 });
 new ECSResourceStack(app, 'ECSResourceStack', {
+  ecrRepository: codePipelineResourceStack.ecrRepository,
+  stackName: 'ECSResourceStack',
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
 });
