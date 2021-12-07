@@ -1,0 +1,32 @@
+{
+  "name": "cdk-resource",
+  "version": "0.1.0",
+  "bin": {
+    "cdk-resource": "bin/cdk-resource.js"
+  },
+  "scripts": {
+    "build": "echo \"The build step is not required when using JavaScript!\" && exit 0",
+    "cdk": "cdk",
+    "test": "jest",
+    "cdk:synth": "cdk synth",
+    "cdk:deploy": "cdk synth; cdk deploy --all --outputs-file ../aws-outputs.json",
+    "cdk:bootstrap": "cdk bootstrap"
+  },
+  "devDependencies": {
+    "aws-cdk": "2.0.0",
+    "jest": "^26.4.2"
+  },
+  "dependencies": {
+    "@aws-cdk/aws-ecs-patterns": "^1.134.0",
+    "aws-cdk-lib": "2.0.0",
+    "constructs": "^10.0.0"
+  },
+  "description": "This is a blank project for JavaScript development with CDK.",
+  "main": "jest.config.js",
+  "directories": {
+    "lib": "lib",
+    "test": "test"
+  },
+  "author": "",
+  "license": "ISC"
+}

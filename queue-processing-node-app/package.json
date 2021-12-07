@@ -1,0 +1,16 @@
+{
+  "name": "queue-node-client-app",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "docker:build": "cd ..;docker build --tag queue-processing-node-app .  ",
+    "docker:run": "docker run -p3000:3000 queue-processing-node-app   "
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
+}

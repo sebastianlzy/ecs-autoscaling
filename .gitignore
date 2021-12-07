@@ -6,6 +6,8 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
+
+
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
@@ -102,3 +104,9 @@ dist
 
 # TernJS port file
 .tern-port
+
+# Intellij
+.idea
+
+# AWS output
+aws-outputs.json
