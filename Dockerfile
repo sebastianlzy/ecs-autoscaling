@@ -1,5 +1,5 @@
-FROM node:14-buster-slim
-#FROM public.ecr.aws/docker/library/node:latest
+#FROM node:14-buster-slim
+FROM public.ecr.aws/docker/library/node:14-buster-slim
 ENV NODE_ENV=production
 
 WORKDIR /app
