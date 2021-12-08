@@ -2,7 +2,7 @@
 FROM public.ecr.aws/docker/library/node:14-buster-slim
 ENV NODE_ENV=production
 
-WORKDIR /app
+WORKDIR /
 
 COPY ["./queue-processing-node-app/package.json", "./queue-processing-node-app/package-lock.json*"]
 
