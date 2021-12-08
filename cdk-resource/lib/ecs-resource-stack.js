@@ -15,19 +15,19 @@ class ECSResourceStack extends Stack {
         super(scope, id, props);
 
         const vpc = ec2.Vpc.fromLookup(this, 'Vpc', {
-          isDefault: true,
+            isDefault: true,
         });
-        const {ecr} = props
+        const {ecrRepository} = props
 
-        // const cluster = new ecs.Cluster(this, 'ECSFargateCluster', { vpc });
+        const cluster = new ecs.Cluster(this, 'ECSFargateCluster', {vpc});
         //
         // const queueProcessingFargateService = new ecsPatterns.QueueProcessingFargateService(this, 'QueueProcessingFargateService', {
         //   cluster,
         //   memoryLimitMiB: 512,
-        //   image: ecs.ContainerImage.fromRegistry('test'),
-        //   command: ["-c", "4", "amazon.com"],
+        //   image: ecs.ContainerImage.fromEcrRepository(ecrRepository),
+        //   command: ["-queue", "4", "amazon.com"],
         //   enableLogging: false,
-        //   desiredTaskCount: 2,
+        //   desiredTaskCount: 1,
         //   environment: {
         //     TEST_ENVIRONMENT_VARIABLE1: "test environment variable 1 value",
         //     TEST_ENVIRONMENT_VARIABLE2: "test environment variable 2 value",
@@ -36,13 +36,25 @@ class ECSResourceStack extends Stack {
         //   containerName: 'test',
         // })
 
+        const loadBalancedFargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'MyWebServer', {
+            cluster,
+            memoryLimitMiB: 1024,
+            cpu: 512,
+            taskImageOptions: {
+                image: ecs.ContainerImage.fromEcrRepository(ecrRepository),
+                containerPort: 3000,
+                enableLogging: true
+                // image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
+            },
+            publicLoadBalancer: true,
+            assignPublicIp: true,
 
-        // new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'MyWebServer', {
-        //     taskImageOptions: {
-        //         image: ecs.ContainerImage.fromRegistry('amazon/amazon-ecs-sample'),
-        //     },
-        //     publicLoadBalancer: true
-        // });
+        });
+
+        loadBalancedFargateService.targetGroup.configureHealthCheck({
+            path: "/",
+            port: "3000"
+        });
     }
 }
 

@@ -10,7 +10,7 @@ const ecrRepositoryName = "queue-processing-ecr-repo"
 const codebuildName = "queue-processing-codebuild-project"
 const codepipelineName = "queue-processing-codepipeline"
 const codeCommitRepositoryName = "queue-processing-codecommit-repo"
-const imageTagVersion = "v1.0.0"
+const imageTagVersion = "latest"
 
 
 class CodePipelineResourceStack extends Stack {
