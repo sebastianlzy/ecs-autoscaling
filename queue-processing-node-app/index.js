@@ -1,20 +1,34 @@
-const express = require('express')
-const app = express()
-const port = 3000
-const exec = require('child_process').exec;
+// const express = require('express')
+// const app = express()
+// const port = 3000
+// const exec = require('child_process').exec;
+
+const { SQSClient, ReceiveMessageCommand } = require("@aws-sdk/client-sqs");
 
 
+const sqsQueueURL = process.env.QUEUE_URL
+const client = new SQSClient({});
+console.log("PRINT ALL ENV VARIABLE")
+console.log(process.env)
 
 
-app.get('/', (req, res) => {
-    exec('uname -m', function (error, stdout, stderr) {
-        if (error) throw res.error("Error: Not able to retrieve architecture");
-        console.log(`I am serving from ${stdout}`)
-        res.send(`I am serving from ${stdout}`)
-    });
+const processMessage = () => {
+    const receiveMessageCommand = new ReceiveMessageCommand({
+        QueueUrl: sqsQueueURL
+    })
+    client.send(receiveMessageCommand).then(
+        (data) => {
+            console.log("RECEIVED INFORMATION FROM QUEUE")
+            console.log(data)
+            console.log("===============================")
+        },
+        (error) => {
+            console.log("ERROR RECEIVING INFORMATION FROM QUEUE")
+            console.log(error)
+            console.log("===============================")
+        }
+    );
+}
 
-})
+setInterval(processMessage, 100)
 
-app.listen(port, () => {
-    console.log(`Example app listening at http://localhost:${port}`)
-})
