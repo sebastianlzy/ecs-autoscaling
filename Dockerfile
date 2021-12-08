@@ -2,11 +2,11 @@
 FROM public.ecr.aws/docker/library/node:14-buster-slim
 ENV NODE_ENV=production
 
-WORKDIR /
+WORKDIR /app
 
-COPY ["./queue-processing-node-app/package.json", "./queue-processing-node-app/package-lock.json*"]
+COPY ["./queue-processing-node-app/package.json", "./queue-processing-node-app/package-lock.json*", "./"]
 
-RUN npm install --production
+RUN echo $(ls ) && npm install --production
 
 COPY ./queue-processing-node-app .
 EXPOSE 3000
