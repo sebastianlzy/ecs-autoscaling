@@ -1,16 +1,13 @@
-const {Stack, CfnOutput} = require('aws-cdk-lib');
+const {Stack, CfnOutput, Fn, Duration} = require('aws-cdk-lib');
 const codebuild = require('aws-cdk-lib/aws-codebuild');
 const codecommit = require('aws-cdk-lib/aws-codecommit');
 const ecr = require('aws-cdk-lib/aws-ecr');
 const iam = require('aws-cdk-lib/aws-iam')
 const codepipeline = require('aws-cdk-lib/aws-codepipeline')
 const codepipeline_actions = require('aws-cdk-lib/aws-codepipeline-actions')
+const lambda = require('aws-cdk-lib/aws-lambda')
 
-const ecrRepositoryName = "queue-processing-ecr-repo"
-const codebuildName = "queue-processing-codebuild-project"
-const codepipelineName = "queue-processing-codepipeline"
-const codeCommitRepositoryName = "queue-processing-codecommit-repo"
-const imageTagVersion = "latest"
+const lambdaFunctionName = "queue-processing-lambda-function"
 
 
 class LoadGenerationResourceStack extends Stack {
@@ -25,85 +22,22 @@ class LoadGenerationResourceStack extends Stack {
     constructor(scope, id, props) {
         super(scope, id, props);
 
-        const createCodePipeline = (codeCommitRepository, codebuildProject) => {
-            const sourceOutput = new codepipeline.Artifact();
-            const sourceAction = new codepipeline_actions.CodeCommitSourceAction({
-                actionName: 'CodeCommit',
-                repository: codeCommitRepository,
-                output: sourceOutput,
-                branch: "main"
-            });
+        const ecrRepositoryName = Fn.importValue("ecrRepositoryName")
+        const ecrRepository = ecr.Repository.fromRepositoryName(this, "ecrRepository", ecrRepositoryName )
 
-            const buildAction = new codepipeline_actions.CodeBuildAction({
-                actionName: 'CodeBuild',
-                project: codebuildProject,
-                input: sourceOutput, // The build action must use the CodeCommitSourceAction output as input.
-            });
+        const queueArn = Fn.importValue("queueArn")
 
-            const codepipelinePipeline = new codepipeline.Pipeline(this, 'QueueProcessingPipeline', {
-                pipelineName: codepipelineName,
-                stages: [
-                    {
-                        stageName: 'Source',
-                        actions: [sourceAction],
-                    },
-                    {
-                        stageName: 'Build',
-                        actions: [buildAction]
-                    }
-                ]
-            });
-        }
 
-        const createCodebuild = () => {
-            const adminManagedPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
-            const codeBuildRole = new iam.Role(this, 'CodeBuildRole', {
-                assumedBy: new iam.ServicePrincipal("codebuild.amazonaws.com"),
-                managedPolicies: [{
-                    managedPolicyArn: adminManagedPolicyArn
-                }],
-                roleName: "CodeBuildRole"
-            })
+        // const lambdaFunction = new lambda.DockerImageFunction(this, 'lambdaFunction', {
+        //     code: lambda.DockerImageCode.fromEcr(ecrRepository, {
+        //         cmd: ["generate-load.main"]
+        //     }),
+        //     environment: {
+        //         QUEUE_ARN: queueArn
+        //     },
+        //     timeout: Duration.seconds(30)
+        // })
 
-            return new codebuild.PipelineProject(this, 'QueueProcessingProject', {
-                // source: codebuild.Source.codeCommit({ repository }),
-                projectName: codebuildName,
-                environmentVariables: {
-                    AWS_DEFAULT_REGION: {value: process.env.CDK_DEFAULT_REGION},
-                    AWS_ACCOUNT_ID: {value: process.env.CDK_DEFAULT_ACCOUNT},
-                    IMAGE_REPO_NAME: {value: ecrRepositoryName},
-                    IMAGE_TAG: {value: imageTagVersion}
-                },
-                environment: {
-                    buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_3,
-                    privileged: true,
-                    computeType: codebuild.ComputeType.SMALL
-                },
-                role: codeBuildRole
-            });
-        }
-
-        const createCodeRepository = () => {
-            const codeCommitRepository = new codecommit.Repository(this, 'QueueProcessingRepo', {
-                repositoryName: codeCommitRepositoryName
-            });
-            new CfnOutput(this, 'codeCommitRepository', {
-                value: codeCommitRepository.repositoryCloneUrlGrc
-            })
-
-            return codeCommitRepository
-        }
-
-        const createECRRepository = () => {
-            return new ecr.Repository(this, 'Repository', {
-                repositoryName: ecrRepositoryName
-            });
-        }
-
-        // this.ecrRepository = createECRRepository()
-        // const codeCommitRepository = createCodeRepository()
-        // const codebuildProject = createCodebuild()
-        // createCodePipeline(codeCommitRepository, codebuildProject)
 
     }
 }

@@ -1,0 +1,3 @@
+[submodule "queue-processing-node-app"]
+	path = queue-processing-node-app
+	url = https://github.com/sebastianlzy/queue-processing-node-app
