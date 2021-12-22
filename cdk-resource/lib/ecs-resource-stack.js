@@ -1,4 +1,4 @@
-const {Stack, Duration, Fn, CfnOutput} = require('aws-cdk-lib');
+const {Stack, CfnOutput} = require('aws-cdk-lib');
 const ecsPatterns = require('aws-cdk-lib/aws-ecs-patterns');
 const ecs = require('aws-cdk-lib/aws-ecs');
 const ec2 = require('aws-cdk-lib/aws-ec2');
@@ -10,6 +10,7 @@ const ecsFargateQueueProcessingServiceName = "queue-processing-ecs-service"
 const ecsFargateLoadGenerationServiceName = "load-generation-ecs-service"
 const ecrRepositoryName = "queue-processing-ecr-repo"
 const ecsClusterName = "ecs-autoscaling-cluster"
+const queueName = "queue-processing-queue"
 
 class ECSResourceStack extends Stack {
     /**
@@ -21,15 +22,25 @@ class ECSResourceStack extends Stack {
     constructor(scope, id, props) {
         super(scope, id, props);
 
-
         const lookupVPC = () => ec2.Vpc.fromLookup(this, 'Vpc', {
             isDefault: true,
         });
         const createQueue =  () => {
-            const queue =  new sqs.Queue(this, 'Queue')
+            const queue =  new sqs.Queue(this, 'Queue', {
+                queueName: queueName
+            })
+
             new CfnOutput(this, 'queueArn', {
                 value: queue.queueArn,
                 exportName: 'queueArn'
+            })
+            new CfnOutput(this, 'queueUrl', {
+                value: queue.queueUrl,
+                exportName: 'queueUrl'
+            })
+            new CfnOutput(this, 'queueName', {
+                value: queue.queueName,
+                exportName: 'queueName'
             })
             return queue
         }
@@ -58,7 +69,7 @@ class ECSResourceStack extends Stack {
             return ecrRepository
         }
         const createQueueProcessingFargateService = (ecrRepository, cluster, queue) => {
-            return new ecsPatterns.QueueProcessingFargateService(this, 'QueueProcessingFargateService', {
+            const queueProcessingFargateService = new ecsPatterns.QueueProcessingFargateService(this, 'QueueProcessingFargateService', {
                 cluster,
                 memoryLimitMiB: 1024,
                 cpu: 512,
@@ -72,23 +83,20 @@ class ECSResourceStack extends Stack {
                 assignPublicIp: true,
                 enableECSManagedTags: true,
                 minScalingCapacity: 1,
+                maxScalingCapacity: 20,
                 command: [ "node", "process-message.js" ],
                 serviceName: ecsFargateQueueProcessingServiceName
             });
-        }
-        const addTrackingPolicyToECSService = (service) => {
-            // const scalableTaskCount = queueProcessingFargateService.service.autoScaleTaskCount({
-            //     maxCapacity: 4
-            // })
-            // scalableTaskCount.scaleOnCpuUtilization('CpuUtilizationScaling', {
-            //     targetUtilizationPercent: 50
-            // })
-        }
 
+            new CfnOutput(this, 'queueProcessingFargateServiceArn', {
+                value: queueProcessingFargateService.service.serviceArn,
+                exportName: 'queueProcessingFargateServiceArn'
+            })
 
-        const fetchIAMAdminPolicy = () => iam.ManagedPolicy.fromAwsManagedPolicyName("AdministratorAccess")
-        const createLoadBalancedFargateService = (ecrRepository, cluster, queue, IAMAdminPolicy) => {
-            return new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Service', {
+            return queueProcessingFargateService
+        }
+        const createLoadBalancedFargateService = (ecrRepository, cluster, queue) => {
+            const loadBalancedFargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Service', {
                 cluster,
                 memoryLimitMiB: 1024,
                 desiredCount: 1,
@@ -106,10 +114,9 @@ class ECSResourceStack extends Stack {
                 assignPublicIp: true,
                 enableECSManagedTags: true,
             });
-        }
-        const addIAMAdminPolicyToTaskExecutionRole = (ecsService, iamPolicy) => {
-            const taskRole = ecsService.taskDefinition.taskRole
-            taskRole.addManagedPolicy(iamPolicy)
+
+            queue.grantSendMessages(loadBalancedFargateService.taskDefinition.taskRole)
+            return loadBalancedFargateService
         }
 
         const vpc = lookupVPC()
@@ -117,14 +124,8 @@ class ECSResourceStack extends Stack {
         const cluster = createECSCluster(vpc)
         const ecrRepository = createECRRepository()
 
-        const queueProcessingFargateService = createQueueProcessingFargateService(ecrRepository, cluster, queue)
-        addTrackingPolicyToECSService(queueProcessingFargateService)
-
-        const loadBalancedFargateService = createLoadBalancedFargateService(ecrRepository, cluster, queue)
-        const IAMAdminPolicy = fetchIAMAdminPolicy()
-        addIAMAdminPolicyToTaskExecutionRole(loadBalancedFargateService, IAMAdminPolicy)
-
-
+        createQueueProcessingFargateService(ecrRepository, cluster, queue)
+        createLoadBalancedFargateService(ecrRepository, cluster, queue)
 
     }
 }

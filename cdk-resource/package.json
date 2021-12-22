@@ -19,6 +19,7 @@
   "dependencies": {
     "@aws-cdk/aws-ecs-patterns": "^1.134.0",
     "aws-cdk-lib": "2.0.0",
+    "aws-sdk": "^2.1046.0",
     "constructs": "^10.0.0"
   },
   "description": "This is a blank project for JavaScript development with CDK.",

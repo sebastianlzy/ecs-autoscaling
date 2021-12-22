@@ -1,11 +1,9 @@
 const {Stack, CfnOutput, Fn} = require('aws-cdk-lib');
 const codebuild = require('aws-cdk-lib/aws-codebuild');
 const codecommit = require('aws-cdk-lib/aws-codecommit');
-const ecr = require('aws-cdk-lib/aws-ecr');
 const iam = require('aws-cdk-lib/aws-iam')
 const codepipeline = require('aws-cdk-lib/aws-codepipeline')
 const codepipeline_actions = require('aws-cdk-lib/aws-codepipeline-actions')
-const codedeploy = require('aws-cdk-lib/aws-codedeploy')
 
 const ecrRepositoryName = "queue-processing-ecr-repo"
 const codebuildName = "queue-processing-codebuild-project"
@@ -37,6 +35,8 @@ class CodePipelineResourceStack extends Stack {
                 branch: "main"
             });
 
+
+
             const buildOutput = new codepipeline.Artifact('buildArtifact');
             const buildAction = new codepipeline_actions.CodeBuildAction({
                 actionName: 'CodeBuild',
@@ -61,7 +61,6 @@ class CodePipelineResourceStack extends Stack {
 
 
         }
-
         const createCodebuild = () => {
             const adminManagedPolicyArn = "arn:aws:iam::aws:policy/AdministratorAccess"
             const codeBuildRole = new iam.Role(this, 'CodeBuildRole', {
@@ -73,7 +72,6 @@ class CodePipelineResourceStack extends Stack {
             })
 
             return new codebuild.PipelineProject(this, 'QueueProcessingProject', {
-                // source: codebuild.Source.codeCommit({ repository }),
                 projectName: codebuildName,
                 environmentVariables: {
                     AWS_DEFAULT_REGION: {value: process.env.CDK_DEFAULT_REGION},
@@ -93,21 +91,22 @@ class CodePipelineResourceStack extends Stack {
             });
 
         }
-
         const createCodeRepository = () => {
-            return new codecommit.Repository(this, 'QueueProcessingRepo', {
+            const codeCommitRepository = new codecommit.Repository(this, 'QueueProcessingRepo', {
                 repositoryName: codeCommitRepositoryName
             });
+            new CfnOutput(this, 'codeCommitRepositoryUrlGrc', {
+                value: codeCommitRepository.repositoryCloneUrlGrc,
+                exportName: 'codeCommitRepositoryUrlGrc'
+            })
+            return codeCommitRepository
         }
 
         const codeCommitRepository = createCodeRepository()
         const codebuildProject = createCodebuild()
-        const codePipeline = createCodePipeline(codeCommitRepository, codebuildProject)
+        createCodePipeline(codeCommitRepository, codebuildProject)
 
-        new CfnOutput(this, 'codeCommitRepositoryUrlGrc', {
-            value: codeCommitRepository.repositoryCloneUrlGrc,
-            exportName: 'codeCommitRepositoryUrlGrc'
-        })
+
 
     }
 }

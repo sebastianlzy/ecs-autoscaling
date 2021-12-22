@@ -3,7 +3,7 @@
 const cdk = require('aws-cdk-lib');
 const { ECSResourceStack } = require('../lib/ecs-resource-stack');
 const { CodePipelineResourceStack } = require('../lib/codepipeline-resource-stack');
-const { LoadGenerationResourceStack } = require('../lib/loadgeneration-resource-stack');
+const { LambdaResourceStack } = require('../lib/lambda-resource-stack');
 
 
 const app = new cdk.App();
@@ -19,10 +19,11 @@ const codePipelineResourceStack = new CodePipelineResourceStack(app, 'CodePipeli
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
 });
 
-const loadGenerationStack = new LoadGenerationResourceStack(app, 'LoadGenerationResourceStack', {
-  stackName: 'LoadGenerationResourceStack',
+const lambdaResourceStack = new LambdaResourceStack(app, 'LambdaResourceStack', {
+  stackName: 'LambdaResourceStack',
+  queue: ecsResourceStack.queue,
   env: { account: process.env.CDK_DEFAULT_ACCOUNT, region: process.env.CDK_DEFAULT_REGION },
 })
 
-// ecsResourceStack.addDependency(codePipelineResourceStack)
-// loadGenerationStack.addDependency(codePipelineResourceStack)
+ecsResourceStack.addDependency(codePipelineResourceStack)
+lambdaResourceStack.addDependency(ecsResourceStack)

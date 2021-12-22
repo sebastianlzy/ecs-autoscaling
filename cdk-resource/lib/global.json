@@ -1,0 +1,11 @@
+{
+  "ecsFargateQueueProcessingServiceName": "queue-processing-ecs-service",
+  "ecsFargateLoadGenerationServiceName": "load-generation-ecs-service",
+  "ecrRepositoryName": "queue-processing-ecr-repo",
+  "ecsClusterName": "ecs-autoscaling-cluster",
+  "queueName": "queue-processing-queue",
+  "codebuildName": "queue-processing-codebuild-project",
+  "codepipelineName": "queue-processing-codepipeline",
+  "codeCommitRepositoryName": "queue-processing-codecommit-repo",
+  "imageTagVersion": "latest"
+}
