@@ -4,16 +4,18 @@ const codecommit = require('aws-cdk-lib/aws-codecommit');
 const iam = require('aws-cdk-lib/aws-iam')
 const codepipeline = require('aws-cdk-lib/aws-codepipeline')
 const codepipeline_actions = require('aws-cdk-lib/aws-codepipeline-actions')
+const global = require("./global.json");
 
-const ecrRepositoryName = "queue-processing-ecr-repo"
-const codebuildName = "queue-processing-codebuild-project"
-const codepipelineName = "queue-processing-codepipeline"
-const codeCommitRepositoryName = "queue-processing-codecommit-repo"
-const ecsFargateQueueProcessingServiceName = "queue-processing-ecs-service"
-const ecsFargateLoadGenerationServiceName = "load-generation-ecs-service"
-const imageTagVersion = "latest"
-const ecsClusterName = "ecs-autoscaling-cluster"
-
+const {
+    ecsFargateQueueProcessingServiceName,
+    ecsClusterName,
+    ecsFargateLoadGenerationServiceName,
+    ecrRepositoryName,
+    codebuildName,
+    codepipelineName,
+    codeCommitRepositoryName,
+    imageTagVersion,
+} = global
 
 class CodePipelineResourceStack extends Stack {
 
@@ -67,8 +69,7 @@ class CodePipelineResourceStack extends Stack {
                 assumedBy: new iam.ServicePrincipal("codebuild.amazonaws.com"),
                 managedPolicies: [{
                     managedPolicyArn: adminManagedPolicyArn
-                }],
-                roleName: "CodeBuildRole"
+                }]
             })
 
             return new codebuild.PipelineProject(this, 'QueueProcessingProject', {

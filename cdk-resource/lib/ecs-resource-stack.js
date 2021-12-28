@@ -1,16 +1,26 @@
-const {Stack, CfnOutput} = require('aws-cdk-lib');
+const {Stack, CfnOutput, Duration} = require('aws-cdk-lib');
 const ecsPatterns = require('aws-cdk-lib/aws-ecs-patterns');
 const ecs = require('aws-cdk-lib/aws-ecs');
 const ec2 = require('aws-cdk-lib/aws-ec2');
 const sqs = require('aws-cdk-lib/aws-sqs');
 const ecr = require('aws-cdk-lib/aws-ecr')
-const iam = require('aws-cdk-lib/aws-iam')
+const cloudwatch = require('aws-cdk-lib/aws-cloudwatch')
+const global = require("./global.json");
 
-const ecsFargateQueueProcessingServiceName = "queue-processing-ecs-service"
-const ecsFargateLoadGenerationServiceName = "load-generation-ecs-service"
-const ecrRepositoryName = "queue-processing-ecr-repo"
-const ecsClusterName = "ecs-autoscaling-cluster"
-const queueName = "queue-processing-queue"
+
+const {
+    ecsFargateQueueProcessingServiceName,
+    ecsClusterName,
+    ecsFargateLoadGenerationServiceName,
+    ecrRepositoryName,
+    ecsTargetTrackingPolicyName,
+    queueName,
+    metricUnit,
+    acceptableLatencyInSeconds,
+    averageProcessingTimePerJobInSeconds,
+    metricName,
+    metricNamespace
+} = global
 
 class ECSResourceStack extends Stack {
     /**
@@ -25,8 +35,8 @@ class ECSResourceStack extends Stack {
         const lookupVPC = () => ec2.Vpc.fromLookup(this, 'Vpc', {
             isDefault: true,
         });
-        const createQueue =  () => {
-            const queue =  new sqs.Queue(this, 'Queue', {
+        const createQueue = () => {
+            const queue = new sqs.Queue(this, 'Queue', {
                 queueName: queueName
             })
 
@@ -69,34 +79,50 @@ class ECSResourceStack extends Stack {
             return ecrRepository
         }
         const createQueueProcessingFargateService = (ecrRepository, cluster, queue) => {
-            const queueProcessingFargateService = new ecsPatterns.QueueProcessingFargateService(this, 'QueueProcessingFargateService', {
-                cluster,
-                memoryLimitMiB: 1024,
-                cpu: 512,
+
+            const taskDefinition = new ecs.FargateTaskDefinition(this, 'QueueProcessingTaskDefinition')
+            taskDefinition.addContainer('queueProcessingContainer', {
                 image: ecs.ContainerImage.fromEcrRepository(ecrRepository),
+                // memoryLimitMiB: 512,
+                // cpu: 512,
+                logging: new ecs.AwsLogDriver({ streamPrefix: 'QueueProcessingTask', mode: ecs.AwsLogDriverMode.NON_BLOCKING }),
+                command: ["node", "process-message.js"],
                 environment: {
                     QUEUE_NAME: queue.queueName,
                     QUEUE_URL: queue.queueUrl,
                     QUEUE_ARN: queue.queueArn
-                },
-                queue: queue,
+                }
+            })
+
+            const queueProcessingFargateService = new ecs.FargateService(this, 'QueueProcessingFargateService', {
+                cluster,
+                taskDefinition,
+                serviceName: ecsFargateQueueProcessingServiceName,
+                capacityProviderStrategies: [
+                    {
+                        capacityProvider: 'FARGATE_SPOT',
+                        weight: 2,
+                    },
+                    {
+                        capacityProvider: 'FARGATE',
+                        weight: 1,
+                    },
+                ],
                 assignPublicIp: true,
                 enableECSManagedTags: true,
-                minScalingCapacity: 1,
-                maxScalingCapacity: 20,
-                command: [ "node", "process-message.js" ],
-                serviceName: ecsFargateQueueProcessingServiceName
-            });
+            })
+
+            queue.grantConsumeMessages(queueProcessingFargateService.taskDefinition.taskRole)
 
             new CfnOutput(this, 'queueProcessingFargateServiceArn', {
-                value: queueProcessingFargateService.service.serviceArn,
+                value: queueProcessingFargateService.serviceArn,
                 exportName: 'queueProcessingFargateServiceArn'
             })
 
             return queueProcessingFargateService
         }
         const createLoadBalancedFargateService = (ecrRepository, cluster, queue) => {
-            const loadBalancedFargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'Service', {
+            const loadBalancedFargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, 'LoadBalancedFargateService', {
                 cluster,
                 memoryLimitMiB: 1024,
                 desiredCount: 1,
@@ -116,7 +142,43 @@ class ECSResourceStack extends Stack {
             });
 
             queue.grantSendMessages(loadBalancedFargateService.taskDefinition.taskRole)
+
+            new CfnOutput(this, 'loadBalancerDnsName', {
+                value: loadBalancedFargateService.loadBalancer.loadBalancerDnsName,
+                exportName: 'loadBalancerDnsName'
+            })
+
             return loadBalancedFargateService
+        }
+
+        const updateScalingPolicy = (queueProcessingFargateService, targetTrackingMetrics) => {
+
+            const scalableTarget = queueProcessingFargateService.autoScaleTaskCount({
+                minCapacity: 1,
+                maxCapacity: 40
+            })
+
+            const backlogPerTaskCloudwatchMetric = new cloudwatch.Metric({
+                metricName: metricName,
+                namespace: metricNamespace,
+                statistic: "AVERAGE",
+                unit: metricUnit,
+                dimensionsMap:{
+                    ECSClusterName: ecsClusterName,
+                    ECSServiceName: ecsFargateQueueProcessingServiceName
+                }
+            })
+            scalableTarget.scaleToTrackCustomMetric("scaleToTrackBacklogPerTask", {
+                metric: backlogPerTaskCloudwatchMetric,
+                policyName: ecsTargetTrackingPolicyName,
+                scaleInCooldown: Duration.minutes(5),
+                scaleOutCooldown: Duration.minutes(5),
+                targetValue: targetTrackingMetrics
+            })
+        }
+
+        const getAcceptableBacklogPerTaskMetrics = () => {
+            return acceptableLatencyInSeconds/averageProcessingTimePerJobInSeconds
         }
 
         const vpc = lookupVPC()
@@ -124,9 +186,10 @@ class ECSResourceStack extends Stack {
         const cluster = createECSCluster(vpc)
         const ecrRepository = createECRRepository()
 
-        createQueueProcessingFargateService(ecrRepository, cluster, queue)
-        createLoadBalancedFargateService(ecrRepository, cluster, queue)
+        const queueProcessingFargateService = createQueueProcessingFargateService(ecrRepository, cluster, queue)
+        updateScalingPolicy(queueProcessingFargateService, getAcceptableBacklogPerTaskMetrics())
 
+        createLoadBalancedFargateService(ecrRepository, cluster, queue)
     }
 }
 

@@ -2,15 +2,19 @@ const {Stack, Fn} = require("aws-cdk-lib");
 const lambda = require("aws-cdk-lib/aws-lambda");
 const events = require("aws-cdk-lib/aws-events");
 const sqs = require("aws-cdk-lib/aws-sqs");
-const ecs = require("aws-cdk-lib/aws-ecs");
 const eventTargets = require("aws-cdk-lib/aws-events-targets");
 const global = require("./global.json")
-const ec2 = require("aws-cdk-lib/aws-ec2");
 const iam = require("aws-cdk-lib/aws-iam");
 
-const ecsServiceName = global.ecsFargateQueueProcessingServiceName
-const ecsClusterName = global.ecsClusterName
-
+const {
+    ecsFargateQueueProcessingServiceName,
+    ecsClusterName,
+    acceptableLatencyInSeconds,
+    averageProcessingTimePerJobInSeconds,
+    metricUnit,
+    metricNamespace,
+    metricName
+} = global
 
 
 class LambdaResourceStack extends Stack {
@@ -26,16 +30,14 @@ class LambdaResourceStack extends Stack {
             queue.grantSendMessages(fn)
         }
         const grantLambdaPermissionToUpdateECSService = (fn) => {
-            const clusterArn = Fn.importValue("clusterArn")
             const fnRole = fn.role
             const policy = new iam.Policy(this, "IAMPolicyForECSCluster", {
                 policyName: "IAMPolicyForECSCluster",
                 statements: [
                     new iam.PolicyStatement({
-                        actions: [ 'ecs:ListTasks', "ecs:UpdateService" ],
+                        actions: [ 'ecs:ListTasks', "ecs:UpdateService", "cloudwatch:PutMetricData" ],
                         effect: iam.Effect.ALLOW,
-                        // resources: [ clusterArn]
-                        resources: [ "*"]
+                        resources: ["*"]
                     })
                 ]
             })
@@ -49,10 +51,13 @@ class LambdaResourceStack extends Stack {
                 handler: "lambda-metrics.main",
                 environment: {
                     QUEUE_URL: queueUrl,
-                    ECS_SERVICE_NAME: ecsServiceName,
+                    ECS_SERVICE_NAME: ecsFargateQueueProcessingServiceName,
                     ECS_CLUSTER_NAME: ecsClusterName,
-                    ACCEPTABLE_LATENCY: "10",
-                    AVERAGE_PROCESSING_TIME: "0.5"
+                    ACCEPTABLE_LATENCY: acceptableLatencyInSeconds,
+                    AVERAGE_PROCESSING_TIME: averageProcessingTimePerJobInSeconds,
+                    METRIC_NAMESPACE: metricNamespace,
+                    METRIC_NAME: metricName,
+                    METRIC_UNIT: metricUnit
                 },
             });
         }
@@ -64,12 +69,14 @@ class LambdaResourceStack extends Stack {
         }
 
         const createSendMessageLambdaFunction = () => {
+
+            const loadBalancerDnsName = Fn.importValue("loadBalancerDnsName")
             return new lambda.Function(this, "SendMessageHandler", {
                 runtime: lambda.Runtime.NODEJS_14_X, // So we can use async in widget.js
                 code: lambda.Code.fromAsset("resources"),
                 handler: "send-message.main",
                 environment: {
-                    BASE_URL: "http://ecsre-servi-12jtih2jvyavj-1913528293.ap-southeast-1.elb.amazonaws.com/",
+                    BASE_URL: loadBalancerDnsName,
                 },
             });
         }

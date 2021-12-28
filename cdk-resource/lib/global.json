@@ -1,11 +1,17 @@
 {
-  "ecsFargateQueueProcessingServiceName": "queue-processing-ecs-service",
-  "ecsFargateLoadGenerationServiceName": "load-generation-ecs-service",
+  "acceptableLatencyInSeconds": "10",
+  "averageProcessingTimePerJobInSeconds": "0.5",
+  "codebuildName": "queue-processing-codebuild-project",
+  "codeCommitRepositoryName": "queue-processing-codecommit-repo",
+  "codepipelineName": "queue-processing-codepipeline",
   "ecrRepositoryName": "queue-processing-ecr-repo",
   "ecsClusterName": "ecs-autoscaling-cluster",
+  "ecsFargateLoadGenerationServiceName": "load-generation-ecs-service",
+  "ecsFargateQueueProcessingServiceName": "queue-processing-ecs-service",
+  "imageTagVersion": "latest",
   "queueName": "queue-processing-queue",
-  "codebuildName": "queue-processing-codebuild-project",
-  "codepipelineName": "queue-processing-codepipeline",
-  "codeCommitRepositoryName": "queue-processing-codecommit-repo",
-  "imageTagVersion": "latest"
+  "metricName": "backlogPerTask",
+  "metricNamespace": "queue-processing-lambda-metrics",
+  "metricUnit": "Count",
+  "ecsTargetTrackingPolicyName": "auto-scaling-using-avg-backlog-per-task"
 }

@@ -24,7 +24,7 @@ exports.main = async function(event, context) {
         const baseUrl = process.env.BASE_URL
 
         const noOfMessageToSend = Math.floor(Math.random() * 100)
-        const url = `${baseUrl}send-message?noofmessage=${noOfMessageToSend}`
+        const url = `http://${baseUrl}/send-message?noofmessage=${noOfMessageToSend}`
         await fetch(url);
 
 
