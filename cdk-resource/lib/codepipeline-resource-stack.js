@@ -1,10 +1,11 @@
-const {Stack, CfnOutput, Fn} = require('aws-cdk-lib');
+const {Stack, CfnOutput} = require('aws-cdk-lib');
 const codebuild = require('aws-cdk-lib/aws-codebuild');
 const codecommit = require('aws-cdk-lib/aws-codecommit');
 const iam = require('aws-cdk-lib/aws-iam')
 const codepipeline = require('aws-cdk-lib/aws-codepipeline')
 const codepipeline_actions = require('aws-cdk-lib/aws-codepipeline-actions')
 const global = require("./global.json");
+const ecr = require("aws-cdk-lib/aws-ecr");
 
 const {
     ecsFargateQueueProcessingServiceName,
@@ -102,7 +103,19 @@ class CodePipelineResourceStack extends Stack {
             })
             return codeCommitRepository
         }
+        const createECRRepository = () => {
+            const ecrRepository = new ecr.Repository(this, 'Repository', {
+                repositoryName: ecrRepositoryName
+            });
+            new CfnOutput(this, 'ecrRepositoryName', {
+                value: ecrRepository.repositoryName,
+                exportName: 'ecrRepositoryName'
+            })
 
+            return ecrRepository
+        }
+
+        const ecrRepository = createECRRepository()
         const codeCommitRepository = createCodeRepository()
         const codebuildProject = createCodebuild()
         createCodePipeline(codeCommitRepository, codebuildProject)

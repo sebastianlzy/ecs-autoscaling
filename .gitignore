@@ -110,3 +110,4 @@ dist
 
 # AWS output
 aws-outputs.json
+.DS_Store

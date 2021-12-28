@@ -1,4 +1,4 @@
-const {Stack, CfnOutput, Duration} = require('aws-cdk-lib');
+const {Stack, CfnOutput, Duration, Fn} = require('aws-cdk-lib');
 const ecsPatterns = require('aws-cdk-lib/aws-ecs-patterns');
 const ecs = require('aws-cdk-lib/aws-ecs');
 const ec2 = require('aws-cdk-lib/aws-ec2');
@@ -67,14 +67,16 @@ class ECSResourceStack extends Stack {
 
             return cluster
         }
-        const createECRRepository = () => {
-            const ecrRepository = new ecr.Repository(this, 'Repository', {
-                repositoryName: ecrRepositoryName
-            });
-            new CfnOutput(this, 'ecrRepositoryName', {
-                value: ecrRepository.repositoryName,
-                exportName: 'ecrRepositoryName'
-            })
+        const getECRRepository = () => {
+            // const ecrRepository = new ecr.Repository(this, 'Repository', {
+            //     repositoryName: ecrRepositoryName
+            // });
+            // new CfnOutput(this, 'ecrRepositoryName', {
+            //     value: ecrRepository.repositoryName,
+            //     exportName: 'ecrRepositoryName'
+            // })
+            const ecrRepositoryName = Fn.importValue("ecrRepositoryName")
+            const ecrRepository = ecr.Repository.fromRepositoryName(this, 'ecrRepositoryName', ecrRepositoryName)
 
             return ecrRepository
         }
@@ -184,7 +186,7 @@ class ECSResourceStack extends Stack {
         const vpc = lookupVPC()
         const queue = createQueue()
         const cluster = createECSCluster(vpc)
-        const ecrRepository = createECRRepository()
+        const ecrRepository = getECRRepository()
 
         const queueProcessingFargateService = createQueueProcessingFargateService(ecrRepository, cluster, queue)
         updateScalingPolicy(queueProcessingFargateService, getAcceptableBacklogPerTaskMetrics())
