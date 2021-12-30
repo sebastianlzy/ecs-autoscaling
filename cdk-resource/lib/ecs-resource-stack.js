@@ -19,7 +19,9 @@ const {
     acceptableLatencyInSeconds,
     averageProcessingTimePerJobInSeconds,
     metricName,
-    metricNamespace
+    metricNamespace,
+    ecsMaxCapacity,
+    ecsMinCapacity
 } = global
 
 class ECSResourceStack extends Stack {
@@ -68,17 +70,7 @@ class ECSResourceStack extends Stack {
             return cluster
         }
         const getECRRepository = () => {
-            // const ecrRepository = new ecr.Repository(this, 'Repository', {
-            //     repositoryName: ecrRepositoryName
-            // });
-            // new CfnOutput(this, 'ecrRepositoryName', {
-            //     value: ecrRepository.repositoryName,
-            //     exportName: 'ecrRepositoryName'
-            // })
-            const ecrRepositoryName = Fn.importValue("ecrRepositoryName")
-            const ecrRepository = ecr.Repository.fromRepositoryName(this, 'ecrRepositoryName', ecrRepositoryName)
-
-            return ecrRepository
+            return ecr.Repository.fromRepositoryName(this, 'ecrRepositoryName', ecrRepositoryName)
         }
         const createQueueProcessingFargateService = (ecrRepository, cluster, queue) => {
 
@@ -104,11 +96,7 @@ class ECSResourceStack extends Stack {
                     {
                         capacityProvider: 'FARGATE_SPOT',
                         weight: 2,
-                    },
-                    {
-                        capacityProvider: 'FARGATE',
-                        weight: 1,
-                    },
+                    }
                 ],
                 assignPublicIp: true,
                 enableECSManagedTags: true,
@@ -156,8 +144,8 @@ class ECSResourceStack extends Stack {
         const updateScalingPolicy = (queueProcessingFargateService, targetTrackingMetrics) => {
 
             const scalableTarget = queueProcessingFargateService.autoScaleTaskCount({
-                minCapacity: 1,
-                maxCapacity: 40
+                minCapacity: ecsMinCapacity,
+                maxCapacity: ecsMaxCapacity
             })
 
             const backlogPerTaskCloudwatchMetric = new cloudwatch.Metric({

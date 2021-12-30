@@ -13,5 +13,7 @@
   "metricName": "backlogPerTask",
   "metricNamespace": "queue-processing-lambda-metrics",
   "metricUnit": "Count",
-  "ecsTargetTrackingPolicyName": "auto-scaling-using-avg-backlog-per-task"
+  "ecsTargetTrackingPolicyName": "auto-scaling-using-avg-backlog-per-task",
+  "ecsMinCapacity": 0,
+  "ecsMaxCapacity": 40
 }
