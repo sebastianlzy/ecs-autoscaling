@@ -165,6 +165,9 @@ If the backlog per task is currently at 150 (1500 / 10), your fleet scales out, 
 
 ## Cloudwatch dashboard
 
+![Cloudwatch Dashboard](./readme/screenshot-cloudwatch-ecs-auto-scaling.png)
+
 ## Target tracking alarm
 
 ![Target Tracking](./readme/screenshots-target-tracking-policy-alarm.png)
+
