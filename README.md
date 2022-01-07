@@ -1,4 +1,4 @@
-# Auto-scaling ECS worker node with target scaling using custom metrics, backlogPerTask
+# AWS ECS auto-scaling with custom metrics (i.e. backlogPerTask)
 
 ## Background
 
