@@ -41,7 +41,7 @@ npm install -g node-jq
 ## Clone repository
 
 ```
-> git clone https://github.com/sebastianlzy/ecs-autoscaling
+> git clone https://github.com/aws-samples/aws-ecs-auto-scaling-with-custom-metrics
 > cd ecs-autoscaling
 > git submodule init  
 > git submodule update
