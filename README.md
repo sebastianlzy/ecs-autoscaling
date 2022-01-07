@@ -21,6 +21,15 @@ Amazon ECS typically measures service utilization based on CPU and memory averag
 
 1. This is a reference architecture and may not be suitable for production use.
 
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+## License
+
+This library is licensed under the MIT-0 License. See the LICENSE file.
+
+
 # Getting started
 
 ## Pre-requisite
@@ -170,4 +179,8 @@ If the backlog per task is currently at 150 (1500 / 10), your fleet scales out, 
 ## Target tracking alarm
 
 ![Target Tracking](./readme/screenshots-target-tracking-policy-alarm.png)
+
+
+
+
 
