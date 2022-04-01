@@ -14,7 +14,7 @@
     "cdk:deploy:CodePipelineResourceStack": "cdk synth; cdk deploy CodePipelineResourceStack --outputs-file ../aws-outputs.json"
   },
   "devDependencies": {
-    "aws-cdk": "2.1.0",
+    "aws-cdk": "2.18.0",
     "jest": "^26.4.2"
   },
   "dependencies": {
